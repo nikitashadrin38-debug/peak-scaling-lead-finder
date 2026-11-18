@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Peak Scaling Lead Finder</title>
+<style>
+:root{--bg:#08111f;--panel:#101d30;--panel2:#14243a;--line:#263b57;--blue:#3488ff;--text:#edf4ff;--muted:#9aacc4;--green:#45d39a;--yellow:#ffd166}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#07101d,#0c1930);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1200px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+.brand{font-size:22px;font-weight:800;letter-spacing:.2px}.brand span{color:var(--blue)}.sub{color:var(--muted);font-size:13px;margin-top:4px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:7px 11px;color:var(--muted);font-size:12px}
+.panel{background:rgba(16,29,48,.96);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 10px 30px #0002}
+h2{font-size:16px;margin:0 0 13px}.controls{display:grid;grid-template-columns:2fr 1fr auto;gap:10px}
+input,select,textarea{width:100%;background:#091526;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px;font:inherit;min-width:0}
+button,.btn{border:0;border-radius:10px;padding:12px 15px;background:var(--blue);color:white;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+button.secondary,.btn.secondary{background:#20344f;border:1px solid #355071}.btn.small,button.small{padding:8px 10px;font-size:12px}
+button:disabled{opacity:.5;cursor:wait}.hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.stat{background:#0b182a;border:1px solid var(--line);border-radius:12px;padding:13px}.stat b{display:block;font-size:23px}.stat span{color:var(--muted);font-size:12px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.toolbar input{max-width:280px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:850px;background:#0b1728}th,td{padding:11px 10px;border-bottom:1px solid #1e3048;text-align:left;vertical-align:middle;font-size:13px}th{color:#a9bdd7;background:#122239;position:sticky;top:0}td input,td select{padding:8px;font-size:12px;min-width:110px}
+.name{font-weight:700}.muted{color:var(--muted)}.tag{display:inline-block;padding:4px 7px;border-radius:7px;background:#18304b;color:#c7dcf7;font-size:11px}.tag.good{background:#123a32;color:#8ff0c5}.tag.warn{background:#45391b;color:#ffe09a}
+.empty{text-align:center;color:var(--muted);padding:35px 15px}.actions{display:flex;gap:6px;flex-wrap:wrap}.notice{border-left:3px solid var(--yellow);padding:10px 12px;background:#2b2618;color:#f8e6b2;border-radius:8px;font-size:12px;line-height:1.5}
+footer{font-size:11px;color:var(--muted);padding:4px 3px 22px}a{color:#8fc0ff}
+@media(max-width:700px){.wrap{padding:14px}.controls{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,1fr)}.stat{padding:10px}.stat b{font-size:19px}.panel{padding:14px}}
+</style></head>
+<body><main class="wrap">
+<header class="top"><div><div class="brand">PEAK <span>SCALING</span> / LEAD FINDER</div><div class="sub">Find landscaping prospects, verify their website status, and organize outreach.</div></div><div class="pill">Free starter version · saves on this device</div></header>
+
+<section class="panel">
+<h2>1. Find landscaping businesses</h2>
+<div class="controls">
+<input id="city" value="Vancouver, WA" placeholder="City, State (example: Vancouver, WA)">
+<select id="radius"><option value="5000">5 km radius</option><option value="10000" selected>10 km radius</option><option value="20000">20 km radius</option><option value="30000">30 km radius</option></select>
+<button id="searchBtn" onclick="searchLeads()">Search area</button>
+</div>
+<div class="hint">Search uses OpenStreetMap community business listings (not Google Maps scraping). Coverage varies by area. A missing website means “not listed in the map data,” not proof the company has no website.</div>
+<div id="status" class="hint" aria-live="polite">Enter a city and tap Search area.</div>
+<div class="stats"><div class="stat"><b id="total">0</b><span>Total saved leads</span></div><div class="stat"><b id="noSite">0</b><span>Website not listed</span></div><div class="stat"><b id="emailCount">0</b><span>Leads with email</span></div></div>
+<div class="notice">Google Maps terms prohibit extracting or exporting its business listings into an outside spreadsheet. This starter app uses OpenStreetMap data instead, which can be reused with attribution and its database licence. You can still open each prospect in Google Maps to manually verify it.</div>
+</section>
+
+<section class="panel">
+<div class="toolbar"><h2 style="margin:0;flex:1">2. Your lead spreadsheet</h2><button class="secondary small" onclick="exportCSV()">Export CSV</button><button class="secondary small" onclick="addLead()">+ Add manually</button></div>
+<div class="toolbar"><input id="filter" placeholder="Filter by company, city, email…" oninput="render()"><select id="siteFilter" onchange="render()" style="max-width:190px"><option value="all">All website statuses</option><option value="missing">Website not listed</option><option value="verified">Verified no website</option><option value="has">Website listed</option></select></div>
+<div class="tablewrap"><table><thead><tr><th>Business</th><th>Email</th><th>Website status</th><th>City / address</th><th>Next step</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="empty">No leads yet. Search an area to get started.</td></tr></tbody></table></div>
+<div class="hint">Edit email addresses and website status directly in the table. “Website not listed” needs manual checking before you pitch them.</div>
+</section>
+
+<section class="panel">
+<h2>3. Email outreach</h2>
+<div class="hint">Select a lead with an email address, then create a personalized draft. The button opens your email app; it does not send automatically.</div>
+<div class="controls" style="grid-template-columns:1fr 1fr auto;margin-top:12px">
+<select id="emailLead"><option value="">Choose a lead with an email</option></select>
+<input id="sender" value="Nick" placeholder="Your name">
+<button onclick="draftEmail()">Create email</button>
+</div>
+<div class="hint" id="draftHint"></div>
+</section>
+
+<footer>Data source: © OpenStreetMap contributors · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">ODbL licence and attribution</a>. This app stores your working lead list in this browser only. Export CSV regularly for backup.</footer>
+</main>
+<script>
+const KEY="peakScalingLeadFinder_v1";let leads=[];
+try{leads=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){leads=[]}
+const $=id=>document.getElementById(id);
+function save(){localStorage.setItem(KEY,JSON.stringify(leads));render()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function id(){return "l"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function websiteStatus(l){return l.status|| (l.website?"has":"missing")}
+function render(){
+ const q=$("filter").value.toLowerCase(),f=$("siteFilter").value;
+ const filtered=leads.filter(l=>([l.name,l.email,l.city,l.address].join(" ").toLowerCase().includes(q))&&(f==="all"||(f==="missing"&&websiteStatus(l)==="missing")||(f==="verified"&&websiteStatus(l)==="verified")||(f==="has"&&websiteStatus(l)==="has")));
+ $("total").textContent=leads.length;$("noSite").textContent=leads.filter(l=>websiteStatus(l)==="missing"||websiteStatus(l)==="verified").length;$("emailCount").textContent=leads.filter(l=>l.email).length;
+ $("rows").innerHTML=filtered.length?filtered.map(l=>`<tr>
+ <td><div class="name">${esc(l.name)}</div><div class="muted">${esc(l.phone||"")}</div></td>
+ <td><input aria-label="Email for ${esc(l.name)}" value="${esc(l.email||"")}" placeholder="Add email" onchange="edit('${l.id}','email',this.value)"></td>
+ <td><select aria-label="Website status for ${esc(l.name)}" onchange="edit('${l.id}','status',this.value)"><option value="missing" ${websiteStatus(l)==="missing"?"selected":""}>Not listed</option><option value="verified" ${websiteStatus(l)==="verified"?"selected":""}>Verified no website</option><option value="has" ${websiteStatus(l)==="has"?"selected":""}>Website listed</option></select>${l.website?`<div class="muted"><a href="${esc(l.website)}" target="_blank" rel="noopener">Open website</a></div>`:""}</td>
+ <td>${esc(l.address||l.city||"")}</td>
+ <td><select aria-label="Outreach status for ${esc(l.name)}" onchange="edit('${l.id}','stage',this.value)"><option ${(!l.stage||l.stage==="New")?"selected":""}>New</option><option ${l.stage==="Email drafted"?"selected":""}>Email drafted</option><option ${l.stage==="Contacted"?"selected":""}>Contacted</option><option ${l.stage==="Replied"?"selected":""}>Replied</option><option ${l.stage==="Not interested"?"selected":""}>Not interested</option><option ${l.stage==="Do not contact"?"selected":""}>Do not contact</option></select></td>
+ <td><div class="actions"><a class="btn small secondary" href="${esc(l.maps||mapsUrl(l))}" target="_blank" rel="noopener">Maps</a><button class="small secondary" onclick="removeLead('${l.id}')">Delete</button></div></td></tr>`).join(""):`<tr><td colspan="6" class="empty">No matching leads. Try another filter or search area.</td></tr>`;
+ const opts=leads.filter(l=>l.email&&l.stage!=="Do not contact").map(l=>`<option value="${l.id}">${esc(l.name)} — ${esc(l.email)}</option>`).join("");
+ $("emailLead").innerHTML='<option value="">Choose a lead with an email</option>'+opts;
+}
+function mapsUrl(l){return "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent((l.name||"")+" "+(l.address||l.city||""))}
+function edit(key,field,value){let l=leads.find(x=>x.id===key);if(l){l[field]=value;save()}}
+function removeLead(key){if(confirm("Delete this lead?")){leads=leads.filter(x=>x.id!==key);save()}}
+function addLead(){let name=prompt("Business name:");if(!name)return;let city=prompt("City:")||"";leads.unshift({id:id(),name,city,email:"",status:"missing",stage:"New",source:"Manual"});save()}
+async function searchLeads(){
+ const city=$("city").value.trim(),radius=Number($("radius").value);if(!city){alert("Enter a city first.");return}
+ const b=$("searchBtn");b.disabled=true;b.textContent="Searching…";$("status").textContent="Finding the search area…";
+ try{
+  const geo=await fetch("https://photon.komoot.io/api/?q="+encodeURIComponent(city)+"&limit=1").then(r=>{if(!r.ok)throw Error("Could not find that area");return r.json()});
+  const feat=geo.features&&geo.features[0];if(!feat)throw Error("Area not found. Try adding the state or country.");
+  const [lon,lat]=feat.geometry.coordinates;
+  $("status").textContent="Searching OpenStreetMap business listings…";
+  const around=`(around:${radius},${lat},${lon})`;
+  const query=`[out:json][timeout:35];(
+    nwr${around}["craft"="landscaper"];
+    nwr${around}["service:landscaping"="yes"];
+    nwr${around}["name"~"landscap|lawn care|yard care|garden maintenance|tree service",i];
+  );out center tags;`;
+  const res=await fetch("https://overpass-api.de/api/interpreter",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:"data="+encodeURIComponent(query)});
+  if(!res.ok)throw Error("The map-data service is busy. Wait a minute and try again.");
+  const data=await res.json();let added=0;
+  for(const el of data.elements||[]){
+   const t=el.tags||{},name=t.name;if(!name)continue;
+   const address=[t["addr:housenumber"],t["addr:street"],t["addr:city"]||t["addr:town"]||t["addr:village"]].filter(Boolean).join(" ");
+   const email=t.email||t["contact:email"]||"";
+   const website=t.website||t["contact:website"]||"";
+   const phone=t.phone||t["contact:phone"]||"";
+   const keyid="osm:"+el.type+":"+el.id;
+   if(leads.some(l=>l.sourceId===keyid))continue;
+   leads.unshift({id:id(),sourceId:keyid,name,email,website,phone,address,city:city,status:website?"has":"missing",stage:"New",source:"OpenStreetMap",maps:"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(name+" "+(address||city))});
+   added++;
+  }
+  save();$("status").textContent=`Finished. Found ${data.elements?.length||0} map objects; added ${added} new named businesses. Review and verify each prospect.`;
+ }catch(e){$("status").textContent="Search issue: "+e.message}
+ finally{b.disabled=false;b.textContent="Search area"}
+}
+function exportCSV(){
+ const cols=["name","email","phone","website","status","address","city","stage","source","sourceId"];
+ const quote=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+ const csv=[cols.join(","),...leads.map(l=>cols.map(c=>quote(l[c])).join(","))].join("\r\n");
+ const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="peak-scaling-leads.csv";a.click();URL.revokeObjectURL(url);
+}
+function draftEmail(){
+ const l=leads.find(x=>x.id===$("emailLead").value);if(!l){alert("Choose a lead first.");return}
+ if(!l.email){alert("Add a public business email first.");return}
+ if(l.stage==="Do not contact"){alert("This lead is marked Do not contact.");return}
+ const sender=$("sender").value.trim()||"Nick";
+ const subject="Quick question about your landscaping business";
+ const body=`Hi ${l.name},\n\nI came across your landscaping business and wanted to ask if you're currently looking to improve your website or online presence.\n\nI run Peak Scaling, and I help landscaping businesses get a professional website that makes it easier for potential customers to learn about their services and get in touch.\n\nWould you be open to seeing an example?\n\nBest,\n${sender}\nPeak Scaling\n\nIf you'd prefer not to hear from me, just reply and let me know.`;
+ $("draftHint").textContent="Opening your email app with a draft for "+l.name+". Review it and add your valid business mailing address before sending.";
+ window.location.href="mailto:"+encodeURIComponent(l.email)+"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
+}
+render();
+</script></body></html>
